@@ -38,12 +38,20 @@ mycc = cc.RCCSD(mf)
 mycc.ip_partition = None
 mycc.ea_partition = None
 mycc.kernel()
-p = mycc.nocc
-mos = mycc.nmo
-q = mos-p
-omegas = [-10.99479191, -11.04387487]
+#p = mycc.nocc
+#mos = mycc.nmo
+#q = mos-p
+#p = [0,1,2,3,4,5,6,7]
+#q = [0,1,2,3,4,5,6,7]
+p = [8,9,10,11,12,13,14,15]
+q = [8,9,10,11,12,13,14,15]
+omegas = [-10.99479191]
+#omegas = np.arange(-10.99479191, -11.04387487,-0.002454148)
+#omegas = [-10.99479191, -11.04387487]
 gfunccc = gf.OneParticleGF(mycc)
-gfunccc.kernel(p,q,omegas)
+end_gfunc = gfunccc.kernel(p,q,omegas)
+print 'ip trace for supercell',np.trace(np.asarray(end_gfunc[0]))
+print 'ea trace for supercell',np.trace(np.asarray(end_gfunc[1]))
 print("KRCCSD energy (per unit cell) =", mycc.e_tot)
 
 
@@ -60,16 +68,27 @@ mycc = cc.KRCCSD(kmf)
 mycc.ip_partition = None
 mycc.ea_partition = None
 mycc.kernel()
-p = mycc.nocc
-mos = mycc.nmo
-q = mos-p
-omegas = np.arange(-10.99479191, -11.04387487,-0.002454148)
+#p = mycc.nocc
+#mos = mycc.nmo
+#q = mos-p
+#p = [0,1,2,3]
+#q = [0,1,2,3]
+p = [4,5,6,7]
+q = [4,5,6,7]
+#omegas = np.arange(-10.99479191, -11.04387487,-0.002454148)
 #omegas = [-10.99479191, -11.04387487]
+omegas = [-10.99479191]
 gfunccc = kpts_gf.OneParticleGF(mycc)
-gfunccc.kernel(kpts,p,q,omegas)
+end_gfunc = gfunccc.kernel(kpts,p,q,omegas)
 print 'kpts',kpts
 print 'p',p
 print 'q',q
+print 'dim gfunc', np.asarray(end_gfunc).shape
+print np.asarray(end_gfunc)
+print 'ip trace at kpt 1', np.trace(np.asarray(end_gfunc[0][0]))
+print 'ip trace at kpt 2', np.trace(np.asarray(end_gfunc[0][1]))
+print 'ea trace at kpt 1', np.trace(np.asarray(end_gfunc[1][0]))
+print 'ea trace at kpt 2', np.trace(np.asarray(end_gfunc[1][1]))
 print("KRCCSD energy (per unit cell) =", mycc.e_tot)
 
 
