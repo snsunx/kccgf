@@ -71,6 +71,9 @@ def greens_e_vector_ip_rhf(cc,p):
     vector1 = np.zeros((nocc),dtype=complex)
     vector2 = np.zeros((nocc,nocc,nvir),dtype=complex)
 
+    #cc.t1 = np.load('t1_test.npy')
+    #cc.t2 = np.load('t2_test.npy')
+
     if hasattr(cc, 'l1') and cc.l1 is not None:
         l1 = cc.l1
         l2 = cc.l2

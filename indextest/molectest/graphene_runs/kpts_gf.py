@@ -87,8 +87,8 @@ def greens_b_vector_ip_rhf(cc,p,kp=None):
     nkpts, nocc, nvir = cc.t1.shape
 
     # b(ki, kk, i, k)     ki == kk == kp
-    vector1 = np.zeros((nocc),dtype='complex128')
-    vector2 = np.zeros((nkpts,nkpts,nocc,nocc,nvir),dtype='complex128')
+    vector1 = np.zeros((nocc),dtype=complex)
+    vector2 = np.zeros((nkpts,nkpts,nocc,nocc,nvir),dtype=complex)
 
     #Added kp index for p<nocc. In else added for loop summing new v1 kp
     #and over ki, kj, kp for v2
@@ -103,10 +103,8 @@ def greens_b_vector_ip_rhf(cc,p,kp=None):
 
 def greens_e_vector_ip_rhf(cc,p,kp=None):
     nkpts, nocc, nvir = cc.t1.shape
-    vector1 = np.zeros((nocc),dtype='complex128')
-    test = np.zeros((nocc),dtype='complex128')
-    vector2 = np.zeros((nkpts,nkpts,nocc,nocc,nvir),dtype='complex128')
-
+    vector1 = np.zeros((nocc),dtype=complex)
+    vector2 = np.zeros((nkpts,nkpts,nocc,nocc,nvir),dtype=complex)
 
     if hasattr(cc, 'l1') and cc.l1 is not None:
         l1 = cc.l1
@@ -120,6 +118,8 @@ def greens_e_vector_ip_rhf(cc,p,kp=None):
       
     if p < nocc:
         vector1[p] = -1.0
+        #vector1 += 0.5 * np.einsum('ia,i->a', l1[0], cc.t1[0,p,:])
+        #vector1 += 0.5 * np.einsum('ia,i->a', l1[1], cc.t1[1,p,:])
         vector1 += np.einsum('ia,a->i', l1[kp], cc.t1[kp,p,:])
         for kc in range(nkpts):
             for kl in range(nkpts):
@@ -168,14 +168,14 @@ def greens_func_multiply(ham,vector,linear_part,args=None):
 
 def initial_ip_guess(cc):
     nkpts, nocc, nvir = cc.t1.shape
-    vector1 = np.zeros((nocc),dtype='complex128')
-    vector2 = np.zeros((nkpts,nkpts,nocc,nocc,nvir),dtype='complex128')
+    vector1 = np.zeros((nocc),dtype=complex)
+    vector2 = np.zeros((nkpts,nkpts,nocc,nocc,nvir),dtype=complex)
     return cc.amplitudes_to_vector_ip(vector1,vector2)
 
 def initial_ea_guess(cc):
     nkpts, nocc, nvir = cc.t1.shape
-    vector1 = np.zeros((nvir),dtype='complex128')
-    vector2 = np.zeros((nkpts,nkpts,nocc,nvir,nvir),dtype='complex128')
+    vector1 = np.zeros((nvir),dtype=complex)
+    vector2 = np.zeros((nkpts,nkpts,nocc,nvir,nvir),dtype=complex)
     return cc.amplitudes_to_vector_ea(vector1,vector2)
 
 
@@ -191,12 +191,11 @@ class OneParticleGF(object):
 
         print("solving ip portion")
         Sw = initial_ip_guess(cc)
-        e_vector = list() 
-
-        for kp, ikpt in enumerate(kptlist):
+        e_vector = list()
+        for ikp, kp in enumerate(kptlist):
             for q in qs:
-                e_vector.append(greens_e_vector_ip_rhf(cc,q,kp))
-        gfvals = np.zeros((len(kptlist), len(ps),len(qs),len(omegas)),dtype='complex128')
+                e_vector.append(greens_e_vector_ip_rhf(cc,q,ikp))
+        gfvals = np.zeros((len(kptlist), len(ps),len(qs),len(omegas)),dtype=complex)
         for kp, ikpt in enumerate(kptlist):
             for ip, p in enumerate(ps):
                 b_vector = greens_b_vector_ip_rhf(cc,p,kp)
@@ -209,7 +208,7 @@ class OneParticleGF(object):
                     size = len(b_vector)
                     Ax = spla.LinearOperator((size,size), matr_multiply)
                     mx = spla.LinearOperator((size,size), invprecond_multiply)
-                    Sw, info = spla.gmres(Ax, b_vector, x0=Sw, tol=1e-15, M=mx)
+                    Sw, info = spla.gmres(Ax, b_vector, x0=Sw, tol=1e-14, M=mx)
                     print '######################################'
                     print 'Ax - b norm = %14.8e' % np.linalg.norm(matr_multiply(Sw) - b_vector)
                     for iq,q in enumerate(qs):
@@ -230,10 +229,10 @@ class OneParticleGF(object):
         print("solving ea portion")
         Sw = initial_ea_guess(cc)
         e_vector = list()
-        for kp, ikpt in enumerate(kptlist): 
+        for kp, ikpt in enumerate(kptlist):
             for p in ps:
                 e_vector.append(greens_e_vector_ea_rhf(cc,p,kp))
-        gfvals = np.zeros((len(kptlist),len(ps),len(qs),len(omegas)),dtype='complex128')
+        gfvals = np.zeros((len(kptlist),len(ps),len(qs),len(omegas)),dtype=complex)
         for kp, ikpt in enumerate(kptlist):
             for iq, q in enumerate(qs):
                 b_vector = greens_b_vector_ea_rhf(cc,q,kp)
@@ -246,7 +245,7 @@ class OneParticleGF(object):
                     size = len(b_vector)
                     Ax = spla.LinearOperator((size,size), matr_multiply)
                     mx = spla.LinearOperator((size,size), invprecond_multiply)
-                    Sw, info = spla.gmres(Ax, b_vector, x0=Sw, tol=10e-14,M=mx)
+                    Sw, info = spla.gmres(Ax, b_vector, x0=Sw, tol=1e-14,M=mx)
                     for ip,p in enumerate(ps):
                         gfvals[kp,ip,iq,iw] = np.dot(e_vector[ip],Sw)
         if len(ps) == 1 and len(qs) == 1:

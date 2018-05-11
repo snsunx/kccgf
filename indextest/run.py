@@ -87,8 +87,10 @@ print 'dim gfunc', np.asarray(end_gfunc).shape
 print np.asarray(end_gfunc)
 print 'ip trace at kpt 1', np.trace(np.asarray(end_gfunc[0][0]))
 print 'ip trace at kpt 2', np.trace(np.asarray(end_gfunc[0][1]))
+print 'sum ip', np.trace(np.asarray(end_gfunc[0][0]))+np.trace(np.asarray(end_gfunc[0][1]))
 print 'ea trace at kpt 1', np.trace(np.asarray(end_gfunc[1][0]))
 print 'ea trace at kpt 2', np.trace(np.asarray(end_gfunc[1][1]))
+print 'sum ea', np.trace(np.asarray(end_gfunc[1][0]))+np.trace(np.asarray(end_gfunc[1][1]))
 print("KRCCSD energy (per unit cell) =", mycc.e_tot)
 
 

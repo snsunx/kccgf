@@ -24,9 +24,10 @@ cell.a = '''
 3.370137329, 0.000000000, 3.370137329
 3.370137329, 3.370137329, 0.000000000'''
 cell.unit = 'B'
-cell.gs = [12, 12, 12]
 cell.verbose = 5
-cell.precision = 10e-10
+cell.precision = 1e-12
+cell.build()
+cell.rcut *= 2.0
 cell.build()
 
 #
@@ -50,8 +51,8 @@ p = [0,1,2,3,4,5,6,7]
 q = [0,1,2,3,4,5,6,7]
 #p = [8,9,10,11,12,13,14,15]
 #q = [8,9,10,11,12,13,14,15]
-omegas = np.arange(-2, 2,0.0367493)
-#omegas = [-10.99479191]
+#omegas = np.arange(-2, 2,0.0367493)
+omegas = [-10.99479191]
 #omegas = np.arange(-10.99479191, -11.04387487,-0.002454148)
 #omegas = [-10.99479191, -11.04387487]
 gfunccc = gf.OneParticleGF(mycc)
@@ -62,6 +63,41 @@ ipmol=np.trace(np.asarray(end_gfunc[0]))
 eamol=np.trace(np.asarray(end_gfunc[1]))
 
 print("KRCCSD energy (per unit cell) =", mycc.e_tot)
+
+kpts = cell.make_kpts(nmp)
+kpts -= kpts[0]
+#kpts = cell.make_kpts([1,1,1])
+kmf = scf.KRHF(cell, kpts, exxdiv=None)
+kmf.kpts = kpts
+kmf.diis = None
+kmf.conv_tol_grad = 1e-8
+kmf.conv_tol = 1e-8
+ehf = kmf.kernel()
+kmf.analyze()
+mycc = cc.KRCCSD(kmf)
+mycc.ip_partition = None
+mycc.ea_partition = None
+mycc.conv_tol_normt = 1e-10
+mycc.conv_tol = 1e-10
+mycc.kernel()
+p = range(mycc.nocc)
+mos = mycc.nmo
+q = range(mos-mycc.nocc)
+gfunccc = kpts_gf.OneParticleGF(mycc)
+kpts_gf_ip = gfunccc.kernel(kpts,p,q,omegas)
+
+print "kpts gf"
+print kpts_gf_ip
+#print "gf"
+#print gf_ip
+
+val = 0.0
+for k in range(2):
+    for iocc in range(4):
+        val += kpts_gf_ip[0][k, iocc, iocc, 0]
+print "trace kpts gf ", val
+print 'ipmol',ipmol
+exit()
 
 
 #
@@ -89,9 +125,9 @@ p = [0,1,2,3]
 q = [0,1,2,3]
 #p = [4,5,6,7]
 #q = [4,5,6,7]
-omegas = np.arange(-2, 2,0.0367493)
+#omegas = np.arange(-2, 2,0.0367493)
 #omegas = [-10.99479191, -11.04387487]
-#omegas = [-10.99479191]
+omegas = [-10.99479191]
 gfunccc = kpts_gf.OneParticleGF(mycc)
 end_gfunc = gfunccc.kernel(kpts,p,q,omegas)
 print 'kpts',kpts
@@ -100,7 +136,7 @@ print 'q',q
 print 'dim gfunc', np.asarray(end_gfunc).shape
 print np.asarray(end_gfunc)
 print 'ip trace at kpt 1', np.trace(np.asarray(end_gfunc[0][0]))
-print 'ip trace at kpt 2', np.trace(np.asarray(end_gfunc[0][1]))
+print 'ip trace at kpt 2', np.trace(np.asarray(end_gfunc[1][1]))
 print 'sum ip'
 temp = np.trace(np.asarray(end_gfunc[0][0]))+np.trace(np.asarray(end_gfunc[0][1]))
 for x in range(len(omegas)):

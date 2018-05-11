@@ -44,6 +44,8 @@ def greens_e_vector_ea_rhf(cc, p, kp=None):
             for kj in range(nkpts):
                 vector2[ki, kj] += 2*l2[ki,kj,kp,p,:,:,:] - \
                                      l2[kj,ki,kp,:,p,:,:]
+        pass
+
     else:
         vector1[ p-nocc ] = -1.0
         vector1 += np.einsum('ia,i->a', l1[kp], cc.t1[kp,:,p-nocc])
@@ -62,9 +64,9 @@ def greens_e_vector_ea_rhf(cc, p, kp=None):
             
             for kj in range(nkpts):
                 vector2[ki,kj] += 2*np.einsum('k,jkba->jab', \
-                                  cc.t1[kp,:,p-nocc], np.conj(l2[ki,kj,kp,:,:,:,:]))
+                                  cc.t1[kp,:,p-nocc], l2[ki,kj,kp,:,:,:,:])
                 vector2[ki,kj] -= np.einsum('k,jkab->jab', \
-                                  cc.t1[kp,:,p-nocc], np.conj(l2[ki,kj,kp,:,:,:,:]))
+                                  cc.t1[kp,:,p-nocc], l2[ki,kj,kp,:,:,:,:])
 
     return cc.amplitudes_to_vector_ea(vector1,vector2)
 
@@ -87,13 +89,18 @@ def greens_b_vector_ip_rhf(cc,p,kp=None):
         vector1 += cc.t1[kp,:,p-nocc]
         for ki in range(nkpts):
             for kj in range(nkpts):
-                vector2[ki,kj] += cc.t2[ki,kj,kp,:,:,p-nocc,:]
+                vector2[ki,kj] += cc.t2[ki,kj,kp,:,:,:,p-nocc]
     return cc.amplitudes_to_vector_ip(vector1,vector2)
 
 def greens_e_vector_ip_rhf(cc,p,kp=None):
     nkpts, nocc, nvir = cc.t1.shape
     vector1 = np.zeros((nocc),dtype=complex)
     vector2 = np.zeros((nkpts,nkpts,nocc,nocc,nvir),dtype=complex)
+
+    #np.save('t1_test',cc.t1)
+    #np.save('t2_test',cc.t2)
+    #cc.t1 = np.load('t1_test.npy')
+    #cc.t2 = np.load('t2_test.npy')
 
     if hasattr(cc, 'l1') and cc.l1 is not None:
         l1 = cc.l1
@@ -102,15 +109,18 @@ def greens_e_vector_ip_rhf(cc,p,kp=None):
         l1 = np.conj(cc.t1)
         l2 = np.conj(cc.t2)
 
+
     if p < nocc:
         vector1[p] = -1.0
-        vector1 += np.einsum('ic,c->i', l1[kp], cc.t1[kp,p,:])
+        vector1 += np.einsum('ia,a->i', l1[kp], cc.t1[kp,p,:])
         for kl in range(nkpts):
             for kc in range(nkpts):
+                kconserv = cc.khelper.kconserv
+                kd = kconserv[kc,kl,kp]
                 vector1 += 2 * np.einsum('ilcd,lcd->i', \
                        l2[kp,kl,kc], cc.t2[kp,kl,kc,p,:,:,:])
                 vector1 -= np.einsum('ilcd,ldc->i',   \
-                       l2[kp,kl,kc], cc.t2[kp,kl,kc,p,:,:,:])
+                       l2[kp,kl,kc], cc.t2[kp,kl,kd,p,:,:,:]) #cc.t2[kp,kl,kc,p,:,:,:])
       
         for kj in range(nkpts):
             vector2[kp,kj,p,:,:] += -2*l1[kj]
@@ -124,13 +134,13 @@ def greens_e_vector_ip_rhf(cc,p,kp=None):
                 vector2[ki,kj] += 2*np.einsum('c,ijcb->ijb', \
                        cc.t1[kp,p,:], l2[ki,kj,kp,:,:,:,:])
                 vector2[ki,kj] -= np.einsum('c,jicb->ijb', \
-                       cc.t1[kp,p,:], l2[ki,kj,kp,:,:,:,:])
+                       cc.t1[kp,p,:], l2[kj,ki,kp,:,:,:,:])
     else:
         vector1 += -l1[kp,:,p-nocc]
         for ki in range(nkpts):
             for kj in range(nkpts):
                 vector2[ki, kj] += -2*l2[ki,kj,kp,:,:,p-nocc,:] + \
-                                   l2[ki,kj,kp,:,:,p-nocc,:]
+                                   l2[kj,ki,kp,:,:,p-nocc,:]
 
     return cc.amplitudes_to_vector_ip(vector1,vector2)
 
