@@ -35,8 +35,8 @@ def greens_e_vector_ea_rhf(cc, p, kp=None):
         l1 = cc.l1
         l2 = cc.l2
     else:
-        l1 = cc.t1
-        l2 = cc.t2
+        l1 = np.conj(cc.t1)
+        l2 = np.conj(cc.t2)
 
     if p < nocc:
         # Changed both to plus
@@ -49,25 +49,54 @@ def greens_e_vector_ea_rhf(cc, p, kp=None):
 
     else:
         vector1[ p-nocc ] = -1.0
-        vector1 += np.einsum('ia,i->a', l1[kp], cc.t1[kp,:,p-nocc])
+        #vector1 += np.einsum('ia,i->a', l1[kp], cc.t1[kp,:,p-nocc])
+        vector1 += np.einsum('ia,i->a', l1[0], cc.t1[0,:,p-nocc]) * 0.5
+        vector1 += np.einsum('ia,i->a', l1[1], cc.t1[1,:,p-nocc]) * 0.5
         for kl in range(nkpts):
             for kc in range(nkpts):
-                vector1 += 2 * np.einsum('klca,klc->a', l2[kp,kl,kc], \
-                           cc.t2[kp,kl,kc,:,:,:,p-nocc])
-                vector1 -= np.einsum('klca,lkc->a', l2[kp,kl,kc], \
-                           cc.t2[kp,kl,kc,:,:,:,p-nocc])
+                #vector1 += 2 * np.einsum('klca,klc->a', l2[kp,kl,kc], \
+                #           cc.t2[kp,kl,kc,:,:,:,p-nocc])
+                vector1 += 2 * np.einsum('klca,klc->a', l2[0,kl,kc], \
+                           cc.t2[0,kl,kc,:,:,:,p-nocc]) * 0.5
+                vector1 += 2 * np.einsum('klca,klc->a', l2[1,kl,kc], \
+                           cc.t2[1,kl,kc,:,:,:,p-nocc]) * 0.5
+
+                #vector1 -= np.einsum('klca,lkc->a', l2[kp,kl,kc], \
+                #           cc.t2[kp,kl,kc,:,:,:,p-nocc])
+                vector1 -= np.einsum('klca,lkc->a', l2[0,kl,kc], \
+                           cc.t2[kl,0,kc,:,:,:,p-nocc]) * 0.5
+
+                vector1 -= np.einsum('klca,lkc->a', l2[1,kl,kc], \
+                           cc.t2[kl,1,kc,:,:,:,p-nocc]) * 0.5
+
 
         for kj in range(nkpts):
-            vector2[kp,kj,:,p-nocc,:] += -2.*l1[kj]
+            #vector2[kp,kj,:,p-nocc,:] += -2.*l1[kj]
+            vector2[0,kj,:,p-nocc,:] += -2.*l1[kj] *0.5
+            vector2[1,kj,:,p-nocc,:] += -2.*l1[kj] *0.5
+
 
         for ki in range(nkpts):
-            vector2[ki,kp,:,:,p-nocc] += l1[ki]
-
+            #vector2[ki,kp,:,:,p-nocc] += l1[ki]
+            vector2[ki,0,:,:,p-nocc] += l1[ki]*0.5
+            vector2[ki,1,:,:,p-nocc] += l1[ki]*0.5
+            
             for kj in range(nkpts):
+                #vector2[ki,kj] += 2*np.einsum('k,jkba->jab', \
+                #                  cc.t1[kp,:,p-nocc], l2[ki,kj,kp,:,:,:,:])
                 vector2[ki,kj] += 2*np.einsum('k,jkba->jab', \
-                                  cc.t1[kp,:,p-nocc], l2[ki,kj,kp,:,:,:,:])
+                                  cc.t1[0,:,p-nocc], l2[ki,kj,0,:,:,:,:]) * 0.5
+                vector2[ki,kj] += 2*np.einsum('k,jkba->jab', \
+                                  cc.t1[1,:,p-nocc], l2[ki,kj,1,:,:,:,:]) * 0.5            
+                
+    
+                #vector2[ki,kj] -= np.einsum('k,jkab->jab', \
+                #                  cc.t1[kp,:,p-nocc], l2[ki,kj,kp,:,:,:,:])
                 vector2[ki,kj] -= np.einsum('k,jkab->jab', \
-                                  cc.t1[kp,:,p-nocc], l2[ki,kj,kp,:,:,:,:])
+                                  cc.t1[0,:,p-nocc], l2[ki,kj,0,:,:,:,:]) * 0.5
+                vector2[ki,kj] -= np.einsum('k,jkab->jab', \
+                                  cc.t1[1,:,p-nocc], l2[ki,kj,1,:,:,:,:]) * 0.5
+
 
     return eom_rccsd.amplitudes_to_vector_ea(vector1,vector2)
 
@@ -268,5 +297,5 @@ class OneParticleGF(object):
             return gfvals
 
     def kernel(self, k, p, q, omegas):
-        return self.solve_ip(k, p, q, omegas) #, self.solve_ea(k, p, q, omegas)
-
+        #return self.solve_ip(k, p, q, omegas) #, self.solve_ea(k, p, q, omegas)
+        return self.solve_ea(k,p,q,omegas)
