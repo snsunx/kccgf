@@ -99,5 +99,5 @@ for k in range(2):
         val += kpts_gf_ip[k, iocc, iocc, 0]
 print "trace kpts gf ", val
 #print 'molectrace     (-0.679067423896-0.000595898244016j)'
-print 'molectrace     ', bal
+print 'molectrace    ', bal
 #print 'molectrace     (-0.700699968762-0.000614590301974j)'
