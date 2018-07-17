@@ -236,5 +236,5 @@ class OneParticleGF(object):
             return gfvals
 
     def kernel(self, k, p, q, omegas):
-        #return self.solve_ip(k, p, q, omegas) #, self.solve_ea(k, p, q, omegas)
-        return self.solve_ea(k,p,q,omegas)
+        return self.solve_ip(k, p, q, omegas) #, self.solve_ea(k, p, q, omegas)
+        #return self.solve_ea(k,p,q,omegas)
