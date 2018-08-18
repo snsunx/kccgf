@@ -117,7 +117,7 @@ class Test(unittest.TestCase):
                 val += kpts_gf_ea[k, iocc, iocc, 0]
 
         print "trace kpts gf ", val
-        print 'molectrace     (-0.679067423896-0.000595898244016j)'
+        print 'molectrace     (-0.629996672535-0.000512440754188j)'
 
         assert (val.real)-(-0.629996672535) < 0.0000001
         assert (val.imag)-(0.000512440754188) < 0.0000001
@@ -141,4 +141,4 @@ class Test(unittest.TestCase):
 #print 'molectrace     (-0.700699968762-0.000614590301974j)'
 #print 'molectrace     (-0.629996672535+0.000512440754188j)'
 #two middle between einsums, no einsums
-#print 'molectrace     (-0.650489987856+0.000529207681403j)'
+#print 'molectrace     (-1.650489987856+0.000529207681403j)'

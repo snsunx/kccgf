@@ -99,7 +99,9 @@ def greens_b_vector_ip_rhf(cc,p,kp=None):
         vector1 += cc.t1[kp,:,p-nocc]
         for ki in range(nkpts):
             for kj in range(nkpts):
-                vector2[ki,kj] += cc.t2[ki,kj,kp,:,:,:,p-nocc]
+                kconserv = kpts_helper.get_kconserv(cc._scf.cell, cc.kpts)
+                ka = kconserv[ki,kj,kp]
+                vector2[ki,kj] += cc.t2[ki,kj,ka,:,:,:,p-nocc]
     return eom_rccsd.amplitudes_to_vector_ip(vector1,vector2)
 
 def greens_e_vector_ip_rhf(cc,p,kp=None):
@@ -145,8 +147,10 @@ def greens_e_vector_ip_rhf(cc,p,kp=None):
         vector1 += -l1[kp,:,p-nocc]
         for ki in range(nkpts):
             for kj in range(nkpts):
+                kconserv = kpts_helper.get_kconserv(cc._scf.cell, cc.kpts)
+                ka = kconserv[ki,kj,kp]
                 vector2[ki, kj] += -2*l2[ki,kj,kp,:,:,p-nocc,:] + \
-                                   l2[ki,kj,kp,:,:,:,p-nocc]
+                                   l2[ki,kj,ka,:,:,:,p-nocc]
 
     return eom_rccsd.amplitudes_to_vector_ip(vector1,vector2)
 

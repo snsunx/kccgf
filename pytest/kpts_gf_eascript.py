@@ -20,7 +20,9 @@ def greens_b_vector_ea_rhf(cc, p, kp=None):
         vector1 += -cc.t1[kp,p,:]
         for ki in range(nkpts):
             for kj in range(nkpts):
-                vector2[ki,kj] += -cc.t2[ki,kj,kp,p,:,:,:]
+                kconserv = kpts_helper.get_kconserv(cc._scf.cell, cc.kpts)
+                kb = kconserv[ki,kp,kj]
+                vector2[kp,kb] += -cc.t2[kp,kb,kj,p,:,:,:]
     else:
         vector1[ p-nocc ] = 1.0
     return eom_rccsd.amplitudes_to_vector_ea(vector1,vector2)
@@ -43,8 +45,12 @@ def greens_e_vector_ea_rhf(cc, p, kp=None):
         vector1 += l1[kp,p,:]
         for ki in range(nkpts):
             for kj in range(nkpts):
-                vector2[ki, kj] += 2*l2[ki,kj,kp,p,:,:,:] - \
-                                     l2[kj,ki,kp,:,p,:,:]
+                kconserv = kpts_helper.get_kconserv(cc._scf.cell, cc.kpts)
+                kb = kconserv[ki,kj,kp]
+                ka = kconserv[ki,kb,kj]
+                vector2[kp,kb] += 2*l2[kp,kb,ki,p,:,:,:]
+                vector2[ka,kp] -= l2[ka,kp,ki,:,p,:,:]
+
     else:
         vector1[ p-nocc ] = -1.0
         vector1 += np.einsum('ia,i->a', l1[kp], cc.t1[kp,:,p-nocc])
