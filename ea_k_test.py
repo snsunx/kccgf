@@ -1,7 +1,9 @@
 '''
 GF CCSD with k-point sampling
 
-TEST TO CHECK CORRECTNESS OF EA PART
+Authors:
+Jim Mcclain
+Jason Yu
 '''
 
 import numpy as np
@@ -32,8 +34,9 @@ cell.rcut *= 2.0
 cell.build()
 
 omegas = [-1.5]
+
 #
-#Run old code
+#Run supercell
 #
 supcell = super_cell(cell, nmp)
 mf = scf.RHF(supcell, exxdiv=None)
@@ -43,7 +46,6 @@ mf.conv_tol = 1e-8
 ehf = mf.kernel()
 mf.analyze()
 mycc = cc.RCCSD(mf)
-#mycc.frozen = [0,1,3,4,5,6,9,10,11,12,14,15]
 mycc.ip_partition = None
 mycc.ea_partition = None
 mycc.conv_tol_normt = 1e-10
@@ -51,8 +53,6 @@ mycc.conv_tol = 1e-10
 mycc.kernel()
 p=[8,9,10,11,12,13,14,15]
 q=[8,9,10,11,12,13,14,15]
-#p=[0,1,2,3,4,5,6,7]
-#q=[0,1,2,3,4,5,6,7]
 gfunccc = gf.OneParticleGF(mycc)
 gf_ea = gfunccc.kernel(p,q,omegas)
 print("KRCCSD energy (per unit cell) =", mycc.e_tot)
@@ -63,19 +63,10 @@ print gf_ea
 bal = 0.0
 for iocc in range(8):
     bal += gf_ea[iocc, iocc, 0]
-#sc_nocc = 2
-#if gf_ea.ndim==3:
-#    for iocc in range(sc_nocc):
-#        bal += gf_ea[iocc,iocc,0]
-#else:
-#    bal += gf_ea[0]
 
-print "trace gf ", bal
 #Run new
-
 kpts = cell.make_kpts(nmp)
 kpts -= kpts[0]
-#kpts = cell.make_kpts([1,1,1])
 kmf = scf.KRHF(cell, kpts, exxdiv=None)
 kmf.kpts = kpts
 kmf.diis = None
@@ -84,7 +75,6 @@ kmf.conv_tol = 1e-8
 ehf = kmf.kernel()
 kmf.analyze()
 mycc = cc.KRCCSD(kmf)
-#mycc.frozen = [[0,1,2,5,6,7],[0,2,3,4,5,7]]
 mycc.ip_partition = None
 mycc.ea_partition = None
 mycc.conv_tol_normt = 1e-10
@@ -92,50 +82,14 @@ mycc.conv_tol = 1e-10
 mycc.kernel()
 p=[4,5,6,7]
 q=[4,5,6,7]
-#p=[0,1,2,3]
-#q=[0,1,2,3]
-#p = range(mycc.nocc)
-#mos = mycc.nmo
-#q = range(mos-mycc.nocc)
-gfunccc = kpts_gf.OneParticleGF(mycc)
-kpts_gf_ea = gfunccc.kernel(kpts,p,q,omegas)
 
-print "kpts gf"
-print kpts_gf_ea
-#print "gf"
-#print gf_ip
+gfunccc = kpts_gf.OneParticleGF(mycc)
+kpts_gf_ea = gfunccc.kernel(kpts,p,q,omegas)[1]
 
 val = 0.0
 for k in range(2):
     for iocc in range(4):
         val += kpts_gf_ea[k, iocc, iocc, 0]
-#nkpts=len(kpts)
-#val = 0.0
-#nocc_per_kpt = [2,2]
-#if kpts_gf_ea.ndim==4:
-#    for k in range(nkpts):
-#        for iocc in range(nocc_per_kpt[k]):
-#            val+=kpts_gf_ea[k,iocc,iocc,0]
-#else:
-#    for k in range(nkpts):
-#        val+=kpts_gf_ea[k,0]
 
-print "trace kpts gf ", val
-print "molec ip      ",bal
-#print 'molec ip       (-0.6108319803645543+0.0004967588252764139j)'
-#ea everything except second part of first einsum block
-#print  'molec ip       (-0.161690898186+0.000132762266567j)'
-
-#ea both bottom einsums
-#print 'trace gf        (-0.164215950151+0.000134847089655j)'
-#ea bottom first einsum only
-#print 'molec ip       (-0.164215926408+0.000134847052123j)'
-#print 'molec ip       (-0.164216181839+0.000134847437435j)'
-#with 2 botstdom einsums
-#print 'trace afgf       (-0.650489787201+0.000529207363046j)'
-#all einsumsdsf
-#print 'molectrace     (-0.679067423896-0.000595898244016j)'
-#print 'molectrace     (-0.700699968762-0.000614590301974j)'
-#print 'molectrace     (-0.629996672535+0.000512440754188j)'
-#two middle between einsums, no einsums
-#print 'molectrace     (-0.650489987856+0.000529207681403j)'
+print "kpts ", val
+print "supercell      ",bal

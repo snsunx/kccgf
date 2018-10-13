@@ -1,6 +1,5 @@
 import collections
 import numpy as np
-#import gminres
 import scipy.sparse.linalg as spla
 from pyscf.cc import eom_rccsd
 from pyscf.cc.eom_rccsd import EOMIP, EOMEA
@@ -251,5 +250,4 @@ class OneParticleGF(object):
             return gfvals
 
     def kernel(self, k, p, q, omegas):
-        #return self.solve_ip(k, p, q, omegas) #, self.solve_ea(k, p, q, omegas)
-        return self.solve_ea(k,p,q,omegas)
+        return self.solve_ip(k, p, q, omegas), self.solve_ea(k, p, q, omegas)
