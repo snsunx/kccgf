@@ -5,6 +5,8 @@ import scipy.sparse.linalg as spla
 from pyscf.cc import eom_rccsd
 from pyscf.cc.eom_rccsd import EOMIP, EOMEA
 from pyscf.pbc.lib import kpts_helper
+import time
+import sys
 
 ###################
 # EA Greens       #
@@ -20,9 +22,7 @@ def greens_b_vector_ea_rhf(cc, p, kp=None):
         vector1 += -cc.t1[kp,p,:]
         for ki in range(nkpts):
             for kj in range(nkpts):
-                kconserv = kpts_helper.get_kconserv(cc._scf.cell, cc.kpts)
-                kb = kconserv[ki,kp,kj]
-                vector2[kp,kb] += -cc.t2[kp,kb,kj,p,:,:,:]
+                vector2[ki,kj] += -cc.t2[kp,ki,kj,p,:,:,:]
     else:
         vector1[ p-nocc ] = 1.0
     return eom_rccsd.amplitudes_to_vector_ea(vector1,vector2)
@@ -48,20 +48,21 @@ def greens_e_vector_ea_rhf(cc, p, kp=None):
                 kconserv = kpts_helper.get_kconserv(cc._scf.cell, cc.kpts)
                 kb = kconserv[ki,kj,kp]
                 ka = kconserv[ki,kb,kj]
-                vector2[kp,kb] += 2*l2[kp,kb,ki,p,:,:,:]
-                vector2[ka,kp] -= l2[ka,kp,ki,:,p,:,:]
+                vector2[ki,kj] += 2*l2[kp,ki,kj,p,:,:,:]
+                vector2[ki,kj] -= l2[ki,kp,kj,:,p,:,:]
+
     else:
         vector1[ p-nocc ] = -1.0
         vector1 += np.einsum('ia,i->a', l1[kp], cc.t1[kp,:,p-nocc])
         for kk in range(nkpts):
             for kl in range(nkpts):
                 kconserv = kpts_helper.get_kconserv(cc._scf.cell, cc.kpts)
-                ka = kconserv[kl,kp,kk]
+                kc = kconserv[kl,kp,kk]
         
-                vector1 += 2 * np.einsum('klca,klc->a', l2[ka,kk,kl], \
-                           cc.t2[ka,kk,kl,:,:,:,p-nocc])
-                vector1 -= np.einsum('klca,lkc->a', l2[ka,kk,kl], \
-                           cc.t2[kk,ka,kl,:,:,:,p-nocc])
+                vector1 += 2 * np.einsum('klca,klc->a', l2[kk,kl,kc], \
+                           cc.t2[kk,kl,kc,:,:,:,p-nocc])
+                vector1 -= np.einsum('klca,lkc->a', l2[kk,kl,kc], \
+                           cc.t2[kl,kk,kc,:,:,:,p-nocc])
 
         for kb in range(nkpts):
             vector2[kb,kp,:,p-nocc,:] += -2.*l1[kb]
@@ -72,9 +73,9 @@ def greens_e_vector_ea_rhf(cc, p, kp=None):
             vector2[ka,ka,:,:,p-nocc] += l1[ka]
 
         for kj in range(nkpts):
-            for kb in range(nkpts):
+            for ka in range(nkpts):
                 kconserv = kpts_helper.get_kconserv(cc._scf.cell, cc.kpts)
-                ka = kconserv[kp,kj,kb]
+                kb = kconserv[kp,kj,ka]
                 
                 vector2[kj,ka] += 2*np.einsum('k,jkba->jab', \
                                   cc.t1[kp,:,p-nocc], l2[kj,kp,kb,:,:,:,:])
@@ -104,9 +105,7 @@ def greens_b_vector_ip_rhf(cc,p,kp=None):
         vector1 += cc.t1[kp,:,p-nocc]
         for ki in range(nkpts):
             for kj in range(nkpts):
-                kconserv = kpts_helper.get_kconserv(cc._scf.cell, cc.kpts)
-                ka = kconserv[ki,kj,kp]
-                vector2[ki,kj] += cc.t2[ki,kj,ka,:,:,:,p-nocc]
+                vector2[ki,kj] += cc.t2[ki,kj,kp,:,:,:,p-nocc]
     return eom_rccsd.amplitudes_to_vector_ip(vector1,vector2)
 
 def greens_e_vector_ip_rhf(cc,p,kp=None):
@@ -144,7 +143,7 @@ def greens_e_vector_ip_rhf(cc,p,kp=None):
                 # kc == kk == kp
                 vector2[ki,kj] += 2*np.einsum('c,ijcb->ijb', \
                        cc.t1[kp,p,:], l2[ki,kj,kp,:,:,:,:])
-
+        
                 vector2[ki,kj] -= np.einsum('c,jicb->ijb', \
                        cc.t1[kp,p,:], l2[kj,ki,kp,:,:,:,:]) 
 
@@ -153,15 +152,14 @@ def greens_e_vector_ip_rhf(cc,p,kp=None):
         for ki in range(nkpts):
             for kj in range(nkpts):
                 kconserv = kpts_helper.get_kconserv(cc._scf.cell, cc.kpts)
-                ka = kconserv[ki,kj,kp]
+                kb = kconserv[ki,kj,kp]
                 vector2[ki, kj] += -2*l2[ki,kj,kp,:,:,p-nocc,:] + \
-                                   l2[ki,kj,ka,:,:,:,p-nocc]
+                                   l2[ki,kj,kb,:,:,:,p-nocc]
 
-    
     return eom_rccsd.amplitudes_to_vector_ip(vector1,vector2)
 
-def greens_func_multiply(ham,vector,linear_part,args=None):
-    return np.array(ham(vector) + (linear_part)*vector)
+def greens_func_multiply(ham,vector,linear_part,kp):
+    return np.array(ham(vector,kp) + (linear_part)*vector)
 
 def initial_ip_guess(cc):
     nkpts, nocc, nvir = cc.t1.shape
@@ -197,7 +195,7 @@ class OneParticleGF(object):
             for ip, p in enumerate(ps):
                 b_vector = greens_b_vector_ip_rhf(cc,p,kp)
                 cc.kshift = kp
-                diag = cc.ipccsd_diag()
+                diag = cc.ipccsd_diag(kp)
                 for iw, omega in enumerate(omegas):
                     invprecond_multiply = lambda x: x/(omega + diag + 1j*self.eta)
                     def matr_multiply(vector,args=None):
@@ -219,8 +217,9 @@ class OneParticleGF(object):
         if not isinstance(ps, collections.Iterable): ps = [ps]
         if not isinstance(qs, collections.Iterable): qs = [qs]
         cc = self.cc
+        kptlist = [kptlist[0]]
         print("solving ea portion")
-        Sw = initial_ea_guess(cc)
+        S0 = initial_ea_guess(cc)
         gfvals = np.zeros((len(kptlist),len(ps),len(qs),len(omegas)),dtype=complex)
         for kp, ikpt in enumerate(kptlist):
             e_vector=list()
@@ -229,15 +228,21 @@ class OneParticleGF(object):
             for iq, q in enumerate(qs):
                 b_vector = greens_b_vector_ea_rhf(cc,q,kp)
                 cc.kshift = kp
-                diag = cc.eaccsd_diag()
+                diag = cc.eaccsd_diag(kp)
                 for iw, omega in enumerate(omegas):
                     invprecond_multiply = lambda x: x/(-omega + diag + 1j*self.eta)
                     def matr_multiply(vector,args=None):
-                        return greens_func_multiply(cc.eaccsd_matvec, vector, -omega + 1j*self.eta)
+                        return greens_func_multiply(cc.eaccsd_matvec, vector, -omega + 1j*self.eta, kp)
                     size = len(b_vector)
                     Ax = spla.LinearOperator((size,size), matr_multiply)
                     mx = spla.LinearOperator((size,size), invprecond_multiply)
-                    Sw, info = spla.gmres(Ax, b_vector, x0=Sw, tol=1e-15, M=mx)
+                    print 'got to gcrotmk with kp,iq,iw',kp,iq,iw
+                    sys.stdout.flush()
+                    start = time.time()
+                    Sw, info = spla.gcrotmk(Ax, b_vector, x0=S0, atol=0, tol=1e-2) #M=mx)
+                    end = time.time()
+                    print 'past gcrotmk with info and time',info,(end-start)
+                    sys.stdout.flush()
                     for ip,p in enumerate(ps):
                         gfvals[kp,ip,iq,iw] = np.dot(e_vector[ip],Sw)
         if len(ps) == 1 and len(qs) == 1:
