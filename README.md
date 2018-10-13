@@ -4,4 +4,4 @@ Authors:
 James McClain
 Jason Yu
 
-WIP ccgf implementation with kpts
+WIP periodic ccgf implementation 
