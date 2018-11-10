@@ -113,7 +113,7 @@ def initial_ea_guess(cc):
     return eom_rccsd.amplitudes_to_vector_ea(vector1,vector2)
 
 
-class OneParticleGF(object):
+class CCGF(object):
     def __init__(self, cc, eta=0.01):
         self.cc = cc
         self.eomip = EOMIP(cc)
@@ -121,8 +121,8 @@ class OneParticleGF(object):
         self.eta = eta
 
     def solve_ip(self, ps, qs, omegas):
-        if not isinstance(ps, collections.Iterable): ps = [ps]
-        if not isinstance(qs, collections.Iterable): qs = [qs]
+        if not isinstance(ps, collections.Iterable): ps = list(ps)
+        if not isinstance(qs, collections.Iterable): qs = list(qs)
         cc = self.cc
         print("solving ip portion")
         Sw = initial_ip_guess(cc)
@@ -134,7 +134,6 @@ class OneParticleGF(object):
             e_vector.append(greens_e_vector_ip_rhf(cc,q))
         gfvals = np.zeros((len(ps),len(qs),len(omegas)),dtype=complex)
         for ip, p in enumerate(ps):
-            print 'gf idx', ip
             b_vector = greens_b_vector_ip_rhf(cc,p)
             for iw, omega in enumerate(omegas):
                 invprecond_multiply = lambda x: x/(omega + diag + 1j*self.eta)
@@ -144,8 +143,9 @@ class OneParticleGF(object):
                 Ax = spla.LinearOperator((size,size), matr_multiply)
                 mx = spla.LinearOperator((size,size), invprecond_multiply)
                 Sw, info = spla.gmres(Ax, b_vector, x0=Sw, tol=1e-14, M=mx)
-                if info != 0:
-                    raise RuntimeError
+                #if info != 0:
+                print('info = ', info)
+                #    raise RuntimeError
                 for iq,q in enumerate(qs):
                     gfvals[ip,iq,iw]  = -np.dot(e_vector[iq],Sw)
         if len(ps) == 1 and len(qs) == 1:
@@ -154,8 +154,8 @@ class OneParticleGF(object):
             return gfvals
 
     def solve_ea(self, ps, qs, omegas):
-        if not isinstance(ps, collections.Iterable): ps = [ps]
-        if not isinstance(qs, collections.Iterable): qs = [qs]
+        if not isinstance(ps, collections.Iterable): ps = list(ps)
+        if not isinstance(qs, collections.Iterable): qs = list(qs)
         cc = self.cc
         print("solving ea portion")
         Sw = initial_ea_guess(cc)
@@ -174,15 +174,9 @@ class OneParticleGF(object):
                 Ax = spla.LinearOperator((size,size), matr_multiply)
                 mx = spla.LinearOperator((size,size), invprecond_multiply)
                 Sw, info = spla.gmres(Ax, b_vector, x0=Sw, tol=1e-15, M=mx)
-                print '##################info######################'
-                print info
-                #print '#################Sw##########################'
-                #print Sw
-                #print '###############e_vector#######################'
-                #print e_vector
+                #print('##################info######################')
+                #print(info)
                 for ip,p in enumerate(ps):
-                    #print '##############e_vector[ip]###############3'
-                    #print e_vector[ip]
                     gfvals[ip,iq,iw] = np.dot(e_vector[ip],Sw)
         if len(ps) == 1 and len(qs) == 1:
             return gfvals[0,0,:]
