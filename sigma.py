@@ -1,5 +1,6 @@
 import numpy as np
-from pyscf import cc, kccgf
+from pyscf import cc
+from .ccgf import *
 from pyscf.gw.gw import get_g
 
 # Self-energy matrix of dimension (nmo, nmo)
@@ -12,7 +13,7 @@ def get_sigma(cc, omega):
     g0 = np.diag(g0)
  
     # Build G
-    gf = kccgf.CCGF(cc, eta=eta)
+    gf = CCGF(cc, eta=eta)
     ps = qs = range(nmo)
     g = gf.solve_ip(ps, qs, omega) + gf.solve_ea(ps, qs, omega)
     g = g[:,:,0] 
