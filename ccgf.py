@@ -124,7 +124,6 @@ class CCGF(object):
         if not isinstance(ps, collections.Iterable): ps = list(ps)
         if not isinstance(qs, collections.Iterable): qs = list(qs)
         cc = self.cc
-        print("solving ip portion")
         Sw = initial_ip_guess(cc)
         Sw += np.random.rand(Sw.shape[0])
         diag = self.eomip.get_diag()
@@ -143,9 +142,6 @@ class CCGF(object):
                 Ax = spla.LinearOperator((size,size), matr_multiply)
                 mx = spla.LinearOperator((size,size), invprecond_multiply)
                 Sw, info = spla.gmres(Ax, b_vector, x0=Sw, tol=1e-14, M=mx)
-                #if info != 0:
-                print('info = ', info)
-                #    raise RuntimeError
                 for iq,q in enumerate(qs):
                     gfvals[ip,iq,iw]  = -np.dot(e_vector[iq],Sw)
         if len(ps) == 1 and len(qs) == 1:
@@ -157,7 +153,6 @@ class CCGF(object):
         if not isinstance(ps, collections.Iterable): ps = list(ps)
         if not isinstance(qs, collections.Iterable): qs = list(qs)
         cc = self.cc
-        print("solving ea portion")
         Sw = initial_ea_guess(cc)
         diag = self.eomea.get_diag()
         e_vector = list()
@@ -174,15 +169,9 @@ class CCGF(object):
                 Ax = spla.LinearOperator((size,size), matr_multiply)
                 mx = spla.LinearOperator((size,size), invprecond_multiply)
                 Sw, info = spla.gmres(Ax, b_vector, x0=Sw, tol=1e-15, M=mx)
-                #print('##################info######################')
-                #print(info)
                 for ip,p in enumerate(ps):
                     gfvals[ip,iq,iw] = np.dot(e_vector[ip],Sw)
         if len(ps) == 1 and len(qs) == 1:
             return gfvals[0,0,:]
         else:
             return gfvals
-
-    def kernel(self, p, q, omegas):
-        #return self.solve_ip(p, q, omegas) #, self.solve_ea(p, q, omegas)
-        return self.solve_ea(p,q,omegas)
